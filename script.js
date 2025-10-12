@@ -38,6 +38,10 @@ function initializeApp() {
     
     setupEventListeners();
     setupAccessibility();
+    
+    // Принудительно устанавливаем светлую тему
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.body.style.background = 'linear-gradient(135deg, #ffafbd 0%, #ffc3a0 100%)';
 }
 
 function setupEventListeners() {
@@ -59,8 +63,19 @@ function setupEventListeners() {
     sendButton.addEventListener('click', sendMessage);
     newChatButton.addEventListener('click', createNewChat);
     menuButton.addEventListener('click', openSidebar);
-    closeSidebar.addEventListener('click', closeSidebar);
-    sidebarOverlay.addEventListener('click', closeSidebar);
+    
+    // Исправленные обработчики закрытия боковой панели
+    closeSidebar.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSidebar();
+    });
+    
+    sidebarOverlay.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSidebar();
+    });
     
     // Предотвращаем закрытие боковой панели при клике внутри нее
     chatsSidebar.addEventListener('click', function(e) {
@@ -78,6 +93,13 @@ function setupEventListeners() {
     // Обработка онлайн/офлайн статуса
     window.addEventListener('online', handleOnlineStatus);
     window.addEventListener('offline', handleOfflineStatus);
+    
+    // Закрытие боковой панели при нажатии Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
+    });
 }
 
 function setupAccessibility() {
@@ -92,9 +114,6 @@ function handleMessageInput(e) {
     
     // Активируем/деактивируем кнопку отправки
     sendButton.disabled = !message || message.length === 0;
-    
-    // Показываем количество символов
-    updateCharacterCount(message.length);
 }
 
 function handleMessageKeypress(event) {
@@ -120,13 +139,6 @@ function handlePaste(e) {
     }
 }
 
-function updateCharacterCount(length) {
-    // Можно добавить отображение счетчика символов
-    if (length > MAX_MESSAGE_LENGTH * 0.8) {
-        showStatus(`Символов: ${length}/${MAX_MESSAGE_LENGTH}`, 'info');
-    }
-}
-
 function handleOnlineStatus() {
     showStatus('Соединение восстановлено!', 'success');
 }
@@ -138,30 +150,29 @@ function handleOfflineStatus() {
 function setupSwipeGestures() {
     let startX = 0;
     let startY = 0;
+    let isSwiping = false;
     
     document.querySelector('.chat-container').addEventListener('touchstart', function(e) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
+        isSwiping = true;
+    });
+    
+    document.querySelector('.chat-container').addEventListener('touchmove', function(e) {
+        if (!isSwiping) return;
+        
+        const currentX = e.touches[0].clientX;
+        const diffX = currentX - startX;
+        
+        // Если свайп вправо более 50px, открываем боковую панель
+        if (diffX > 50) {
+            openSidebar();
+            isSwiping = false;
+        }
     });
     
     document.querySelector('.chat-container').addEventListener('touchend', function(e) {
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        const diffX = startX - endX;
-        const diffY = startY - endY;
-        
-        // Проверяем, что это горизонтальный свайп (не вертикальный)
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-            // Если свайп вправо более 50px, открываем боковую панель
-            if (diffX < -50) {
-                openSidebar();
-            }
-            
-            // Если свайп влево более 50px, закрываем боковую панель
-            if (diffX > 50) {
-                closeSidebar();
-            }
-        }
+        isSwiping = false;
     });
 }
 
@@ -275,7 +286,10 @@ function loadChat(chatId) {
 }
 
 function deleteChat(chatId, event) {
-    if (event) event.stopPropagation();
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     
     if (chats.length <= 1) {
         showStatus('Нельзя удалить единственный чат!', 'error');
@@ -316,7 +330,7 @@ function renderChatsList() {
     const chatsList = document.getElementById('chatsList');
     
     if (chats.length === 0) {
-        chatsList.innerHTML = '<p class="text-center text-gray-500 py-4">Нет сохраненных чатов</p>';
+        chatsList.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-comments text-2xl mb-2"></i><p>Нет сохраненных чатов</p></div>';
         return;
     }
     
@@ -325,10 +339,12 @@ function renderChatsList() {
     
     chatsList.innerHTML = sortedChats.map(chat => `
         <div class="chat-item ${chat.id === currentChatId ? 'active' : ''}" role="listitem">
-            <div class="flex-1" onclick="loadChat('${chat.id}')" role="button" tabindex="0" onkeypress="if(event.key==='Enter') loadChat('${chat.id}')">
-                <div class="chat-title">${escapeHtml(chat.title)}</div>
+            <div class="chat-item-content" onclick="loadChat('${chat.id}')" role="button" tabindex="0" onkeypress="if(event.key==='Enter') loadChat('${chat.id}')">
+                <div class="chat-header">
+                    <div class="chat-title">${escapeHtml(chat.title)}</div>
+                    <div class="chat-date">${formatDate(chat.updatedAt)}</div>
+                </div>
                 <div class="chat-preview">${getChatPreview(chat)}</div>
-                <div class="chat-date">${formatDate(chat.updatedAt)}</div>
             </div>
             <button class="delete-chat-btn" onclick="deleteChat('${chat.id}', event)" aria-label="Удалить чат">
                 <i class="fas fa-trash" aria-hidden="true"></i>
