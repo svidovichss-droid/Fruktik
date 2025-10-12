@@ -51,7 +51,6 @@ function setupEventListeners() {
     const menuButton = document.getElementById('menuButton');
     const closeSidebar = document.getElementById('closeSidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const chatsSidebar = document.getElementById('chatsSidebar');
     const chatContainer = document.querySelector('.chat-container');
     
     // Обработка ввода сообщения
@@ -64,22 +63,15 @@ function setupEventListeners() {
     newChatButton.addEventListener('click', createNewChat);
     menuButton.addEventListener('click', openSidebar);
     
-    // Исправленные обработчики закрытия боковой панели
+    // ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ ЗАКРЫТИЯ БОКОВОЙ ПАНЕЛИ
     closeSidebar.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeSidebar();
+        console.log('Close button clicked');
+        closeSidebarFunction();
     });
     
     sidebarOverlay.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeSidebar();
-    });
-    
-    // Предотвращаем закрытие боковой панели при клике внутри нее
-    chatsSidebar.addEventListener('click', function(e) {
-        e.stopPropagation();
+        console.log('Overlay clicked');
+        closeSidebarFunction();
     });
     
     // Автофокус на поле ввода
@@ -97,7 +89,7 @@ function setupEventListeners() {
     // Закрытие боковой панели при нажатии Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            closeSidebar();
+            closeSidebarFunction();
         }
     });
 }
@@ -191,9 +183,12 @@ function openSidebar() {
     renderChatsList();
 }
 
-function closeSidebar() {
+// ПЕРЕИМЕНОВАЛИ ФУНКЦИЮ ЧТОБЫ ИЗБЕЖАТЬ КОНФЛИКТА С ID
+function closeSidebarFunction() {
     const sidebar = document.getElementById('chatsSidebar');
     const overlay = document.getElementById('sidebarOverlay');
+    
+    console.log('Closing sidebar', sidebar, overlay);
     
     sidebar.classList.remove('active');
     sidebar.setAttribute('aria-hidden', 'true');
@@ -261,7 +256,7 @@ function createNewChat() {
     saveChats();
     renderChat();
     renderChatsList();
-    closeSidebar();
+    closeSidebarFunction();
     
     // Фокус на поле ввода
     const messageInput = document.getElementById('messageInput');
@@ -277,7 +272,7 @@ function generateChatId() {
 function loadChat(chatId) {
     currentChatId = chatId;
     renderChat();
-    closeSidebar();
+    closeSidebarFunction();
     
     // Фокус на поле ввода
     document.getElementById('messageInput').focus();
